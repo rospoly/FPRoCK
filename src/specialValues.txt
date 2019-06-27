@@ -1,0 +1,154 @@
+(declare-const MinusInfinity Real)
+(assert (= MinusInfinity 0.0))
+
+(declare-const PlusInfinity Real)
+(assert (= PlusInfinity 1.0))
+
+(declare-const MinusZero Real)
+(assert (= MinusZero 2.0))
+
+(declare-const PlusZero Real)
+(assert (= PlusZero 3.0))
+
+(declare-const Number Real)
+(assert (= Number 4.0))
+
+(declare-const NotANumber Real)
+(assert (= NotANumber 5.0))
+
+(define-fun minReal ((X Real) (Y Real)) Real 
+	(ite (< X Y) X Y))
+
+(define-fun maxReal ((X Real) (Y Real)) Real 
+	(ite (> X Y) X Y))
+
+(define-fun absvalue ((X Real)) Real 
+	(ite (> X 0) X (- 0 X)))
+
+(define-fun absflag ((flag Real)) Real 
+	(ite (= flag MinusInfinity) PlusInfinity 
+	(ite (= flag MinusZero) PlusZero flag )))
+
+(define-fun initFlag ((val Real) (coverVal Real) (maxValPos Real)) Real
+	(ite (and (> val 0.0) (> val maxValPos)) 			PlusInfinity
+	(ite (and (< val 0.0) (< val (- maxValPos))) 		MinusInfinity
+	(ite (and (= val 0.0) (>= coverVal 0.0))			PlusZero
+	(ite (and (= val 0.0) (<= coverVal 0.0)) 			MinusZero Number)))))
+
+(define-fun initFlagInherit ((val Real) (coverVal Real) (maxValPos Real) (inheritFlag Real)) Real
+	(ite (not (= inheritFlag Number)) inheritFlag (initFlag val coverVal maxValPos)))
+	
+(define-fun add ((x Real) (valuex Real) (y Real) (valuey Real)) Real
+	(ite (or (= x NotANumber) (= y NotANumber)) 					NotANumber
+	(ite (and (=  x MinusInfinity) (=  y PlusInfinity)) 			NotANumber
+	(ite (and (=  x PlusInfinity) (=  y MinusInfinity)) 			NotANumber
+	(ite (and (=  x MinusInfinity) (not (=  y PlusInfinity))) 		MinusInfinity
+	(ite (and (=  y MinusInfinity) (not (=  x PlusInfinity))) 		MinusInfinity
+	(ite (and (=  x PlusInfinity) (not (=  y MinusInfinity))) 		PlusInfinity
+	(ite (and (=  y PlusInfinity) (not (=  x MinusInfinity))) 		PlusInfinity
+	(ite (and (= x PlusZero) (or (= y MinusZero) (= y PlusZero)))	PlusZero
+	(ite (and (= y PlusZero) (or (= x MinusZero) (= x PlusZero))) 	PlusZero
+	(ite (and (= x MinusZero) (= y MinusZero))						MinusZero Number )))))))))))
+	
+(define-fun sub ((x Real) (valuex Real) (y Real) (valuey Real)) Real
+	(ite (or (= x NotANumber) (= y NotANumber)) 					NotANumber
+	(ite (and (=  x MinusInfinity) (=  y MinusInfinity)) 			NotANumber
+	(ite (and (=  x PlusInfinity) (=  y PlusInfinity)) 				NotANumber
+	(ite (and (=  x MinusInfinity) (not (=  y MinusInfinity))) 		MinusInfinity
+	(ite (and (=  y MinusInfinity) (not (=  x MinusInfinity))) 		PlusInfinity
+	(ite (and (=  x PlusInfinity) (not (=  y PlusInfinity))) 		PlusInfinity
+	(ite (and (=  y PlusInfinity) (not (=  x PlusInfinity))) 		MinusInfinity
+	(ite (and (= x PlusZero) (or (= y MinusZero) (= y PlusZero)))	PlusZero
+	(ite (and (= y MinusZero) (or (= x MinusZero) (= x PlusZero))) 	PlusZero
+	(ite (and (= x MinusZero) (= y PlusZero))						MinusZero Number )))))))))))
+	
+(define-fun mul ((x Real) (valuex Real) (y Real) (valuey Real)) Real
+	(ite (or (= x NotANumber) (= y NotANumber)) 										NotANumber
+	(ite (and (= x MinusInfinity) (or (= y MinusInfinity) (= y MinusZero))) 			PlusInfinity
+	(ite (and (= x PlusInfinity) (or (= y PlusInfinity) (= y PlusZero))) 				PlusInfinity
+	(ite (and (= x PlusInfinity) (= y Number) (> valuey 0.0)) 							PlusInfinity
+	(ite (and (= y MinusInfinity) (or (= x MinusInfinity) (= x MinusZero))) 			PlusInfinity
+	(ite (and (= y PlusInfinity) (or (= x PlusInfinity) (= x PlusZero) (= x Number))) 	PlusInfinity
+	(ite (and (= y PlusInfinity) (= x Number) (> valuex 0.0)) 							PlusInfinity
+	(ite (and (= x PlusZero) (= y PlusZero))											PlusZero
+	(ite (and (= x MinusZero) (= y MinusZero))											PlusZero
+	(ite (or (= x MinusZero) (= y MinusZero))											MinusZero
+	(ite (and (= x Number) (or (= y MinusZero) (= y PlusZero) (= y Number))) 			Number	
+	(ite (and (= y Number) (or (= x MinusZero) (= x PlusZero) (= x Number))) 			Number MinusInfinity )))))))))))))
+	
+(define-fun divFloat ((x Real) (valuex Real) (y Real) (valuey Real)) Real
+	(ite (and (= x Number) (= y Number)) 																Number
+	(ite (or (= x NotANumber) (= y NotANumber)) 														NotANumber
+	(ite (and (or (= x MinusZero) (= x PlusZero)) (or (= y MinusZero) (= y PlusZero)))					NotANumber
+	(ite (and (or (= x MinusInfinity) (= x PlusInfinity)) (or (= y MinusInfinity) (= y PlusInfinity)))	NotANumber
+	(ite (and (= x MinusInfinity) (or (= y MinusZero) (and (= y Number) (< valuey 0.0)))) 				PlusInfinity
+	(ite (and (= x MinusInfinity) (or (= y PlusZero ) (and (= y Number) (> valuey 0.0)))) 				MinusInfinity
+	(ite (and (= x PlusInfinity) (or (= y MinusZero) (and (= y Number) (< valuey 0.0)))) 				MinusInfinity
+	(ite (and (= x PlusInfinity) (or (= y PlusZero ) (and (= y Number) (> valuey 0.0)))) 				PlusInfinity
+	(ite (and (= x MinusZero) (or (= y MinusInfinity) (and (= y Number) (< valuey 0.0)))) 				PlusZero
+	(ite (and (= x MinusZero) (or (= y PlusInfinity) (and (= y Number) (> valuey 0.0)))) 				MinusZero
+	(ite (and (= x PlusZero) (or (= y MinusInfinity) (and (= y Number) (< valuey 0.0)))) 				MinusZero
+	(ite (and (= x PlusZero) (or (= y PlusInfinity) (and (= y Number) (> valuey 0.0)))) 				PlusZero
+	(ite (and (= y Number) (> valuey 0.0) (= y MinusInfinity))  										MinusZero
+	(ite (and (= y Number) (> valuey 0.0) (= y PlusInfinity))	  										PlusZero
+	(ite (and (= y Number) (> valuey 0.0) (= y MinusZero))  											MinusInfinity
+	(ite (and (= y Number) (> valuey 0.0) (= y PlusZero))	  											PlusInfinity
+	(ite (and (= y Number) (< valuey 0.0) (= y MinusInfinity))  										PlusZero
+	(ite (and (= y Number) (< valuey 0.0) (= y PlusInfinity))	  										MinusZero
+	(ite (and (= y Number) (< valuey 0.0) (= y MinusZero))  											PlusInfinity 
+	MinusInfinity ))))))))))))))))))))
+	
+(define-fun g ((x Real) (valuex Real) (y Real) (valuey Real)) Bool
+	(ite (or (= x NotANumber) (= y NotANumber)) 										false
+	(ite (or (= x MinusInfinity) (= y PlusInfinity)) 									false
+	(ite (and (or (= x MinusZero) (= x PlusZero)) (or (= y MinusZero) (= y PlusZero))) 	false
+	(ite (= x PlusInfinity) 															true
+	(ite (= y MinusInfinity) 															true
+	(> valuex valuey)))))))
+
+(define-fun ge ((x Real) (valuex Real) (y Real) (valuey Real)) Bool
+	(ite (or (= x NotANumber) (= y NotANumber)) 										false
+	(ite (or (= x PlusInfinity) (= y MinusInfinity))									true
+	(ite (or (= x MinusInfinity) (= y PlusInfinity))									false
+	(ite (and (or (= x MinusZero) (= x PlusZero)) (or (= y MinusZero) (= y PlusZero))) 	true
+	(>= valuex valuey))))))
+
+(define-fun s ((x Real) (valuex Real) (y Real) (valuey Real)) Bool
+	(ite (or (= x NotANumber) (= y NotANumber)) 										false
+	(ite (or (= x PlusInfinity) (= y MinusInfinity))									false
+	(ite (and (or (= x MinusZero) (= x PlusZero)) (or (= y MinusZero) (= y PlusZero)))	false
+	(ite (= x MinusInfinity)															true
+	(ite (= y PlusInfinity)																true
+	(< valuex valuey)))))))
+	
+(define-fun se ((x Real) (valuex Real) (y Real) (valuey Real)) Bool
+	(ite (or (= x NotANumber) (= y NotANumber)) 												false
+	(ite (or (= x MinusInfinity) (= y PlusInfinity)) 											true
+	(ite (or (= y MinusInfinity) (= x PlusInfinity)) 											false
+	(ite (and (or (= x MinusZero) (= x PlusZero)) (or (= y MinusZero) (= y PlusZero))) 			true
+	(<= valuex valuey))))))
+
+(define-fun eq ((x Real) (valuex Real) (y Real) (valuey Real)) Bool
+	(ite (and (= x Number) (= y Number) (= valuex valuey)) 										true
+	(ite (and (= x Number) (= y PlusZero) (= valuex 0.0))	 									true
+	(ite (and (= x Number) (= y MinusZero) (= valuex 0.0))	 									true
+	(ite (and (= y Number) (= x PlusZero) (= valuey 0.0))	 									true
+	(ite (and (= y Number) (= x MinusZero) (= valuey 0.0))										true
+	(ite (and (or (= x MinusZero) (= x PlusZero)) (or (= y MinusZero) (= y PlusZero)))		 	true
+	(ite (and (= x y) (= x PlusInfinity)) 														true
+	(ite (and (= x y) (= x MinusInfinity)) 														true 
+		false)))))))))
+
+(define-fun neq ((x Real) (valuex Real) (y Real) (valuey Real)) Bool (not (eq x valuex y valuey)))
+
+(define-fun To_Real ((flagx Real) (valuex Real)) Real
+	(ite (= flagx Number) valuex 0.0))
+
+(define-fun minFlag ((flagx Real) (valuex Real) (flagy Real) (valuey Real)) Real 
+	(ite (s flagx valuex flagy valuey) flagx flagy))
+
+(define-fun maxFlag ((flagx Real) (valuex Real) (flagy Real) (valuey Real)) Real
+	(ite (g flagx valuex flagy valuey) flagx flagy))
+
+
+
