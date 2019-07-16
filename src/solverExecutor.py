@@ -44,10 +44,7 @@ class solverExecutor:
 			tmpResult=res.result()
 			if tmpResult[1]=="":
 				orig_out=tmpResult[0]
-				#print orig_out
-				#out=orig_out
 				out=solver.elaborateOutput(orig_out)
-				#print out
 				if "sat" in out.lower():
 					retOutput=out
 					break

@@ -36,9 +36,12 @@ class z3wrapper:
 		#				"\n(check-sat-using (then simplify bit-blast qfnra))\n(get-model)",
 		#				"\n(check-sat-using (then simplify solve-eqs smt))\n(get-model)",
 		#				"\n(check-sat-using (then simplify solve-eqs sat))\n(get-model)"])
-		checkTactics =["\n(check-sat-using (par-or (then solve-eqs smt) (then qfnra-nlsat) (then nlsat) (then simplify qfnra-nlsat) (then ctx-solver-simplify qfnra-nlsat)))\n(get-model)"]
+		#checkTactics =["\n(check-sat-using (par-or (then solve-eqs smt) (then qfnra-nlsat) (then nlsat) (then simplify qfnra-nlsat) (then ctx-solver-simplify qfnra-nlsat)))\n(get-model)"]
+		checkTactics =["\n(check-sat)\n(get-model)","\n(check-sat-using qfnra-nlsat)\n(get-model)"]
+		
 		for start in startEncoding:
 			for check in checkTactics:
+				#print check
 				encodings.append(mandatoryStartEncoding+start+self.encoding+check)
 		return encodings
 	
@@ -85,7 +88,8 @@ class z3wrapper:
 		elif "unknown" in lines[0]:
 			return "unknown"
 		elif "sat" in lines[0]:
-			while i < len(lines):
+			return output
+			'''while i < len(lines):
 				if self.checkFlagVariables(lines[i]):
 					i=i+2
 				else:
@@ -94,7 +98,7 @@ class z3wrapper:
 					else:
 						res=res+lines[i]+"\n"
 					i=i+1
-			return res
+			return res'''
 		else:
 			print "Error in the output from the solver."
 			exit(0)

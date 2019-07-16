@@ -128,7 +128,9 @@ def adjustLbUbForSpecificFormat(lb,ub,mantissa,minDenormal,minNormal,maxNumber):
 
 def exponentRangeLbUb(mantissa,quantizedlb,quantizedub,minNormal,maxNormal):
 	#print "lbub",quantizedlb,quantizedub
+	
 	with gmpy2.local_context(gmpy2.context(), precision=max(5*mantissa,100)) as ctx:
+	
 		if gmpy2.is_nan(quantizedlb):
 			expLb = mpfr(minNormal)
 		elif mpfr("0.0")>=quantizedlb and mpfr("0.0")<=quantizedub:
@@ -209,7 +211,6 @@ class FPVariable:
 		fpvar= fpvar+ "(declare-const flag-"+ self.name +" Real)\n"
 		fpvar= fpvar+ "(declare-const abs-"+ coverVarName +" Real)\n"
 		fpvar= fpvar+ "(declare-const two-to-exp-p-minus-e-" +coverVarName + " Real)\n"
-		fpvar= fpvar+ "(assert (= two-to-exp-p-minus-e-" + coverVarName + " (" + coverVarName + "-TwoPminusE abs-" + coverVarName + ")))\n"
 
 		fpvar= fpvar+ "(assert (= abs-" + coverVarName + " (absvalue " + coverVarName + ")))\n"
 		fpvar= fpvar+ "(declare-const " + self.name + " Real)\n\n"
@@ -221,47 +222,52 @@ class FPVariable:
 		
 		fpvar= fpvar+ "(assert (= (* " + self.name + " two-to-exp-p-minus-e-" + coverVarName +") (quantize " +coverVarName+" two-to-exp-p-minus-e-" + coverVarName +")))\n\n"
 		return fpvar
-				
+	
 	def encodeExponentRangeLinear(self):
-		val="(define-fun "+self.realCounterpart.name+"-TwoPminusE ((X Real)) Real \n"
-		par=")"
-			
-		with gmpy2.local_context(gmpy2.context(), precision=max(5*self.mantissa,100)) as ctx:
-				
+		val=""
+		var="abs-"+self.realCounterpart.name
+		varexp="two-to-exp-p-minus-e-"+self.realCounterpart.name
+		with gmpy2.local_context(gmpy2.context(), precision=max(5*self.mantissa,100)) as ctx:	
 			iteratorExp=gmpy2.floor(gmpy2.log2(self.expLb))
 			iterator=gmpy2.exp2(iteratorExp)
-			#print "iteratorExp", iteratorExp
-			#print "iterator", iterator
+
 			nextIterator=gmpy2.exp2(iteratorExp+1)
 			twoPminusE=gmpy2.exp2(self.mantissa-iteratorExp)
-			
-			val=val+"(ite (< X "+printFullNumberMPFR(nextIterator)+") "+printFullNumberMPFR(twoPminusE)+" \n"
-			par=par+")"
+
+			val=val+"(assert (=> (and (>= "+var+" 0.0) (< "+var+" "+self.exponentLb+")) (= "+varexp+" "+printFullNumberMPFR(twoPminusE)+"))) \n"
+
+			if nextIterator<=self.expUb:
+				val=val+"(assert (=> (and (>= "+var+" "+self.exponentLb+") (< "+var+" "+printFullNumberMPFR(nextIterator)+")) (= "+varexp+" "+printFullNumberMPFR(twoPminusE)+"))) \n"
+			else:
+				val=val+"(assert (=> (and (>= "+var+" "+self.exponentLb+") (<= "+var+" "+self.exponentUb+")) (= "+varexp+" "+printFullNumberMPFR(twoPminusE)+"))) \n"
 			
 			iteratorExp=iteratorExp+1
 			iterator=gmpy2.exp2(iteratorExp)
 			nextIterator=gmpy2.exp2(iteratorExp+1)
 			twoPminusE=gmpy2.exp2(self.mantissa-iteratorExp)
 			
-			if not iterator<=self.expUb:
-				val=val+"\t"+printFullNumberMPFR(twoPminusE)+" "
+			#if not iterator<=self.expUb:
+			#	val=val+"(assert (=> (and (>= "+var+" "+printFullNumberMPFR(iterator)+") (<= "+var+" "+self.quantizedub+")) (= "+varexp+" "+printFullNumberMPFR(twoPminusE)+"))) \n"
+			#	val=val+"\t"+printFullNumberMPFR(twoPminusE)+" "
 			
 			while iterator<=self.expUb:
 				if nextIterator<=self.expUb:
-					val=val+"(ite (and (<= "+printFullNumberMPFR(iterator)+" X) (< X "+printFullNumberMPFR(nextIterator)+")) "+printFullNumberMPFR(twoPminusE)+" \n"
-					par=par+")"	
+					val=val+"(assert (=> (and (>= "+var+" "+printFullNumberMPFR(iterator)+") (< "+var+" "+printFullNumberMPFR(nextIterator)+")) (= "+varexp+" "+printFullNumberMPFR(twoPminusE)+"))) \n"
+					#par=par+")"	
 				else:
-					val=val+"\t"+printFullNumberMPFR(twoPminusE)+" "
+					val=val+"(assert (=> (and (>= "+var+" "+printFullNumberMPFR(iterator)+") (<= "+var+" "+self.quantizedub+")) (= "+varexp+" "+printFullNumberMPFR(twoPminusE)+"))) \n"
+					#par=par+")"
+					#val=val+"\t"+printFullNumberMPFR(twoPminusE)+" "
 				iteratorExp=iteratorExp+1
 				iterator=gmpy2.exp2(iteratorExp)
 				nextIterator=gmpy2.exp2(iteratorExp+1)
 				twoPminusE=gmpy2.exp2(self.mantissa-iteratorExp)
 				
-			val=val+par+"\n\n"
+			#val=val+par+"\n\n"
 		return val
-	
+
 	def encode(self):
-		return self.encodeExponentRangeLinear()+self.encodeInit()+"\n\n"
+		return self.encodeInit()+self.encodeExponentRangeLinear()+"\n\n"
 	
 	def giveMiddlePoint(self):
 		if self.realLb=="nan" and self.realUb=="nan":
@@ -465,7 +471,7 @@ class RealVariable:
 				return counter
 				
 class modelSolverLS:
-	def __init__(self,roundingMode="rnd-to-nearest-even", branchandbound=False):
+	def __init__(self,roundingMode="rnd-to-nearest-even"):
 		self.FPVariables=collections.OrderedDict()
 		self.realPrivateCounterpartFP=collections.OrderedDict()
 		self.RealVariables=collections.OrderedDict()
@@ -478,9 +484,7 @@ class modelSolverLS:
 		
 		self.nameforMaxOperator="max-"
 		self.nameforMinOperator="min-"
-		
-		self.branchandbound=branchandbound
-		
+				
 		self.nameforToReal="ConvToReal-"
 		self.nameforToFP="ConvToFP-"
 		self.nameforAbsolute="absop-"
@@ -495,14 +499,16 @@ class modelSolverLS:
 		self.mapSymbolsFPArithmeticToReal=self.initMapFPArithmeticToReal()
 		self.mapSymbolsSpecialValues=self.initMapSymbolsSpecialValues()
 		
-		self.program=""
-		self.varEncoding=""
+		self.isLeaf=True
+		#self.program=""
+		#self.varEncoding=""
+		
 		self.preliminaryEncoding=self.initEncoding()
-		self.status=""
+		self.status="Virgin"
+		self.encodingOrderedList=[]
 	
 	def getEncoding(self):
-		self.encodeVariables()
-		return (self.preliminaryEncoding+self.varEncoding+self.program)
+		return (self.preliminaryEncoding+self.encodeVariablesAndProgram())
 		
 	def initMapSymbolsSpecialValues(self):
 		myMap={}
@@ -578,7 +584,8 @@ class modelSolverLS:
 		return ""
 		
 	def encodeConstraints(self,expression):
-		self.program=self.program+expression
+		self.encodingOrderedList.append("(assert "+expression+")\n\n")
+		#self.program=self.program+expression
 		return expression
 	
 	def buildNotLogicExpression(self,expression):
@@ -742,7 +749,8 @@ class modelSolverLS:
 				lb,ub=self.safeIntervalForRealArithmetic(leftOperandVar,symbol,rightOperandVar)
 				realVar=self.addVariableReal(realVarName,lb,ub)
 				encodeOperation="(assert (= "+realVarName+" ( "+symbol+" "+ leftOperandVar.name + " "+rightOperandVar.name+")))\n"
-				self.program=self.program+encodeOperation
+				self.encodingOrderedList.append(encodeOperation)
+				#self.program=self.program+encodeOperation
 
 			return realVarName
 		else:
@@ -769,7 +777,7 @@ class modelSolverLS:
 					fpVar=self.FPVariables[fpVarName]
 				else:
 					fpVar=self.addVariableFP(fpVarName,"0.0","0.0",rightOperandVar.mantissa,rightOperandVar.exponent)
-					self.program=self.program+realEncoding
+					#self.program=self.program+realEncoding
 					
 				leftOperand=fpVarName
 			else:
@@ -793,7 +801,8 @@ class modelSolverLS:
 				flagOperation="("+self.mapSymbolsArithmeticFlags[symbol]+" flag-"+leftOperand+" "+leftOperand+" flag-"+rightOperand+" "+rightOperand+")"
 				fpVar=self.addVariableFP(fpVarName,lb,ub,mantissaDest,exponentDest,flagOperation)
 				realEncoding=encodeRealArithmeticExpressionCounterpart(fpVar.realCounterpart.name,leftOperandVar.name,self.mapSymbolsFPArithmeticToReal[symbol], rightOperandVar.name)
-				self.program=self.program+realEncoding
+				self.encodingOrderedList.append(realEncoding)
+				#self.program=self.program+realEncoding
 				#self.encoding=self.encoding+realEncoding
 			return fpVarName
 		else:
@@ -870,7 +879,8 @@ class modelSolverLS:
 				lb,ub=self.safeIntervalForMaxMinOperatorReal(leftOperandVar,"max",rightOperandVar)
 				realVar=self.addVariableReal(realVarName,lb,ub)
 				encodeOperation="(assert (= "+realVarName+" (maxReal " + leftOperandVar.name + " "+rightOperandVar.name+")))\n"
-				self.program=self.program+encodeOperation
+				self.encodingOrderedList.append(encodeOperation)
+				#self.program=self.program+encodeOperation
 			return realVarName
 			
 		elif leftOperand in self.FPVariables and rightOperand in self.FPVariables:
@@ -889,7 +899,8 @@ class modelSolverLS:
 				flagOperation="(maxFlag "+" flag-"+leftOperand+" "+leftOperand+" flag-"+rightOperand+" "+rightOperand+")"
 				fpVar=self.addVariableFP(fpVarName,lb,ub,mantissaDest,exponentDest,flagOperation)
 				realEncoding="(assert (= "+fpVar.realCounterpart.name+" (maxReal " + leftOperandVar.name + " "+rightOperandVar.name+")))\n"				
-				self.program=self.program+realEncoding
+				self.encodingOrderedList.append(realEncoding)
+				#self.program=self.program+realEncoding
 				#self.encoding=self.encoding+realEncoding
 			return fpVarName
 		else:
@@ -928,7 +939,8 @@ class modelSolverLS:
 				lb,ub=self.safeIntervalForMaxMinOperatorReal(leftOperandVar,"min",rightOperandVar)
 				realVar=self.addVariableReal(realVarName,lb,ub)
 				encodeOperation="(assert (= "+realVarName+" (minReal " + leftOperandVar.name + " "+rightOperandVar.name+")))\n"
-				self.program=self.program+encodeOperation
+				self.encodingOrderedList.append(encodeOperation)
+				#self.program=self.program+encodeOperation
 			return realVarName
 			
 		elif leftOperand in self.FPVariables and rightOperand in self.FPVariables:
@@ -947,7 +959,8 @@ class modelSolverLS:
 				flagOperation="(minFlag "+" flag-"+leftOperand+" "+leftOperand+" flag-"+rightOperand+" "+rightOperand+")"
 				fpVar=self.addVariableFP(fpVarName,lb,ub,mantissaDest,exponentDest,flagOperation)
 				realEncoding="(assert (= "+fpVar.realCounterpart.name+" (minReal " + leftOperandVar.name + " "+rightOperandVar.name+")))\n"				
-				self.program=self.program+realEncoding
+				self.encodingOrderedList.append(realEncoding)
+				#self.program=self.program+realEncoding
 				#self.encoding=self.encoding+realEncoding
 			return fpVarName
 		else:
@@ -966,7 +979,8 @@ class modelSolverLS:
 			else:
 				realVar=self.addVariableReal(realVarName, var.lb, var.ub)
 				encodeAssignment="(assert (= (absvalue "+var.name+") "+realVar.name+"))\n\n"
-				self.program=self.program+encodeAssignment
+				self.encodingOrderedList.append(encodeAssignment)
+				#self.program=self.program+encodeAssignment
 				#self.encoding=self.encoding+encodeAssignment
 			return realVar.name
 			
@@ -980,7 +994,8 @@ class modelSolverLS:
 				fpVar=self.addVariableFP(absoluteVarName,var.quantizedlb,var.quantizedub,var.mantissa,var.exponent,inheritFlag)
 				coverName=fpVar.realCounterpart.name
 				encodeAssignment="(assert (= "+coverName+" (absvalue "+var.name+")))\n\n"
-				self.program=self.program+encodeAssignment
+				self.encodingOrderedList.append(encodeAssignment)
+				#self.program=self.program+encodeAssignment
 				#self.encoding=self.encoding+encodeAssignment
 			return fpVar.name
 			
@@ -991,7 +1006,8 @@ class modelSolverLS:
 			else:
 				realVar=self.addVariableReal(realVarName, printFullNumberString(expression), printFullNumberString(expression))
 			encodeAssignment="(assert (= (absvalue "+expression+") "+realVar.name+"))\n\n"
-			self.program=self.program+encodeAssignment
+			self.encodingOrderedList.append(encodeAssignment)
+			#self.program=self.program+encodeAssignment
 			#self.encoding=self.encoding+encodeAssignment
 			return realVar.name
 		else:
@@ -1013,7 +1029,8 @@ class modelSolverLS:
 				fpVar=self.addVariableFP(fpVarName,var.lb,var.ub,int(mantissa),int(exponent))
 				coverName=fpVar.realCounterpart.name
 				encodeAssignment="(assert (= "+coverName+" "+var.name+"))\n\n"
-				self.program=self.program+encodeAssignment
+				self.encodingOrderedList.append(encodeAssignment)
+				#self.program=self.program+encodeAssignment
 				#self.encoding=self.encoding+encodeAssignment
 			return fpVarName
 		elif expression in self.FPVariables:
@@ -1028,7 +1045,8 @@ class modelSolverLS:
 				fpVar=self.addVariableFP(fpVarName,var.quantizedlb,var.quantizedub,int(mantissa),int(exponent),inheritFlag)
 				coverName=fpVar.realCounterpart.name
 				encodeAssignment="(assert (= "+coverName+" "+var.name+")))\n\n"
-				self.program=self.program+encodeAssignment
+				self.encodingOrderedList.append(encodeAssignment)
+				#self.program=self.program+encodeAssignment
 				#self.encoding=self.encoding+encodeAssignment
 			return fpVarName
 		elif isNumericReal(expression):
@@ -1041,7 +1059,8 @@ class modelSolverLS:
 			else:
 				coverName=fpVar.realCounterpart.name
 				encodeAssignment="(assert (= "+coverName+" "+printFullNumberString(expression)+"))\n\n"
-				self.program=self.program+encodeAssignment
+				self.encodingOrderedList.append(encodeAssignment)
+				#self.program=self.program+encodeAssignment
 				#self.encoding=self.encoding+encodeAssignment
 			return fpVarName
 			
@@ -1068,27 +1087,35 @@ class modelSolverLS:
 			else:
 				realVar=self.addVariableReal(realVarName, var.quantizedlb, var.quantizedub)
 				encodeAssignment="(assert (= (To_Real flag-"+var.name+" "+var.name+") "+realVar.name+"))\n\n"
-				self.program=self.program+encodeAssignment
+				self.encodingOrderedList.append(encodeAssignment)
+				#self.program=self.program+encodeAssignment
 				#self.encoding=self.encoding+encodeAssignment
 			return realVarName
 		else:
 			print "Expression '"+expression+"'is already a real or it has not been declared."
-			exit(0)
+			exit(-1)
 		
 	def addVariableReal(self,name,lb,ub):
 		if name in self.RealVariables or name in self.FPVariables or name in self.Alias:
 			print "Variable '"+name+"' found twice!"
-			exit(0)
+			exit(-1)
 		
 		self.RealVariables[name]=RealVariable(name,lb,ub)
+		if not name in self.encodingOrderedList:
+			self.encodingOrderedList.append(name)
 		#self.encoding=self.encoding+self.RealVariables[name].encode()
 		return self.RealVariables[name]
 	
-	def encodeVariables(self):
-		for var in self.RealVariables:
-			self.varEncoding=self.varEncoding+self.RealVariables[var].encode()
-		for var in self.FPVariables:
-			self.varEncoding=self.varEncoding+self.FPVariables[var].encode()
+	def encodeVariablesAndProgram(self):
+		program=""
+		for val in self.encodingOrderedList:
+			if val in self.RealVariables:
+				program=program+self.RealVariables[val].encode()
+			elif val in self.FPVariables:
+				program=program+self.FPVariables[val].encode()
+			else:
+				program=program+val
+		return program
 	
 	def createFlagFromInit(self,lb,ub):
 		if lb=="+inf" and ub=="+inf":
@@ -1110,11 +1137,13 @@ class modelSolverLS:
 		if inheritFlag=="":
 			inheritFlag=self.createFlagFromInit(lb,ub)
 		self.FPVariables[name]=FPVariable(name,lb,ub,mantissa,exponent,self.realPrivateCounterpartFP[self.nameforPrivateCounterpart+name],inheritFlag)
+		if not name in self.encodingOrderedList:
+			self.encodingOrderedList.append(name)
 		#self.encoding=self.encoding+self.FPVariables[name].encode()
 		return self.FPVariables[name]
 	
 	def encodeQuantizationProcedure(self):
-		encoding="(define-fun quantize ((val Real) (exp-p-minus-e-val Real)) Real \n" 
+		encoding="(define-fun quantize ((val Real) (exp-p-minus-e-val Real)) Real \n"
 		encoding=encoding+"\t (to_real ("+self.roundingMode+" (* val exp-p-minus-e-val))))\n\n"
 		return encoding
 		

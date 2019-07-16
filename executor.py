@@ -8,47 +8,47 @@ import concurrent.futures
 import copy 
 
 def compute(text, currentSolver, deepThreshold, timeout, debug, index, tmpDir):
+	
 	tmpsolver=copy.deepcopy(currentSolver)
+
 	real_variables= tmpsolver.RealVariables
 	coverFP_variables= tmpsolver.realPrivateCounterpartFP
 	fp_variables= tmpsolver.FPVariables
 	
+
 	startTime=time.time()
-	print "Start Encoding! (original problem)"
+	print "Start Encoding!"
 	myYacc=FPRyacc(text,tmpsolver,False,True,debug)
-	print "End Encoding!  (original problem)"
-	
-	print "Start Solving!  (original problem)"
+
 	z3 = z3wrapper(tmpsolver.getEncoding(),timeout)
+	print "End Encoding!"
+	print "Start Solving!"
 	solverList = [z3]
 	executor = solverExecutor(solverList,tmpDir)
 	retOutput = executor.execute(index)
 	endTime = time.time()
-	print "End Solving!  (original problem)"
+	print "End Solving!"
 	
-	print "Info-(original problem)-Output: "+str(retOutput)
-	print "Info-(original problem)-Time: "+str(endTime-startTime)
+	print "Info-Output: "+str(retOutput)
+	print "Info-Time: "+str(endTime-startTime)
 	
 	if "timeout" in retOutput:
 		print "Start BaB!"
 		bnb=BranchAndBound(deepThreshold)
 		bnb.producePaving(0,currentSolver,1)
 		print "Finish BaB!"
-		currentSolver.status=retOutput
-		return bnb.solvers
+		return retOutput, index, bnb.solvers
 	elif "unknown" in retOutput:
 		print "unknown detected!!"
 		exit(-1)
 	elif "unsat" in retOutput:
-		currentSolver.status=retOutput
-		return []
+		return retOutput, index, []
 	elif "sat" in retOutput:
-		currentSolver.status=retOutput
 		print "Start BaB!"
 		bnb=BranchAndBound(deepThreshold)
 		bnb.producePaving(0,currentSolver,1)
 		print "Finish BaB!"
-		return bnb.solvers
+		return retOutput, index, bnb.solvers
 	else:
 		print "I do not know whats going on"
 		exit(-1)
@@ -78,31 +78,57 @@ solversList.append(initsolver)
 deepThreshold=1
 iteratorSolvers=0
 
-timeout=3.0
-maxtimeout=30.0
+timeout=10.0
+#maxtimeout=120.0
 
-maxLenghtList=10000000
+maxLenghtList=2000
 results = []
 pool = concurrent.futures.ProcessPoolExecutor(max_workers=multiprocessing.cpu_count())
 
 while iteratorSolvers < len(solversList):
+
 	results = []
 	
 	tmpIteratorSolver=iteratorSolvers
 	
 	for currentSolver in solversList[tmpIteratorSolver:]:
-		#tmp_solver=copy.deepcopy(currentSolver)
 		results.append(pool.submit(compute, text, currentSolver, deepThreshold, timeout, debug, iteratorSolvers,tmpDir))
 		iteratorSolvers=iteratorSolvers+1
 		
 	for res in concurrent.futures.as_completed(results):
-		tmpResult=res.result()
-		solversList=solversList+tmpResult
-		timeout=min(timeout+0.5,maxtimeout)
-		for solver in tmpResult:
-			solver.printVariables()
+		satOrUnsatOrTimeout, indexParent, childrenSolver=res.result()
+		solversList[indexParent].status=satOrUnsatOrTimeout
+		if len(solversList)<maxLenghtList:
+			if len(childrenSolver)>=1:
+				solversList[indexParent].isLeaf=False
+				solversList=solversList+childrenSolver
+		#timeout=min(timeout+0.5,maxtimeout)
+		#for solver in tmpResult:
+		#	solver.printVariables()
 	
 	print "i: "+str(iteratorSolvers)
 	print "len: "+str(len(solversList))
 	#print solversList
 	#raw_input()
+
+counterUnsat=0
+counterSat=0
+counterTimeout=0
+for solver in solversList:
+	if solver.isLeaf:
+		if solver.status=="unsat":
+			counterUnsat=counterUnsat+1
+		elif solver.status=="timeout":
+			counterTimeout=counterTimeout+1
+		elif "sat" in solver.status:
+			counterSat=counterSat+1
+		else:
+			print "Problem in the analysis"
+			exit(-1)
+			
+print "Sat: "+str(counterSat)
+print "Timeout: "+str(counterTimeout)
+print "Unsat: "+str(counterUnsat)
+
+print "Tot: "+str(counterSat+counterTimeout+counterUnsat)
+print "Prob: "+str(float(counterSat+counterTimeout)/(counterSat+counterUnsat+counterTimeout))

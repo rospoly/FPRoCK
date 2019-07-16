@@ -1,20 +1,11 @@
 (declare-const MinusInfinity Real)
-(assert (= MinusInfinity 0.0))
-
 (declare-const PlusInfinity Real)
-(assert (= PlusInfinity 1.0))
-
 (declare-const MinusZero Real)
-(assert (= MinusZero 2.0))
-
 (declare-const PlusZero Real)
-(assert (= PlusZero 3.0))
-
 (declare-const Number Real)
-(assert (= Number 4.0))
-
 (declare-const NotANumber Real)
-(assert (= NotANumber 5.0))
+
+(assert (distinct MinusInfinity PlusInfinity MinusZero PlusZero Number NotANumber))
 
 (define-fun minReal ((X Real) (Y Real)) Real 
 	(ite (< X Y) X Y))
@@ -39,42 +30,55 @@
 	(ite (not (= inheritFlag Number)) inheritFlag (initFlag val coverVal maxValPos)))
 	
 (define-fun add ((x Real) (valuex Real) (y Real) (valuey Real)) Real
-	(ite (or (= x NotANumber) (= y NotANumber)) 					NotANumber
-	(ite (and (=  x MinusInfinity) (=  y PlusInfinity)) 			NotANumber
-	(ite (and (=  x PlusInfinity) (=  y MinusInfinity)) 			NotANumber
-	(ite (and (=  x MinusInfinity) (not (=  y PlusInfinity))) 		MinusInfinity
-	(ite (and (=  y MinusInfinity) (not (=  x PlusInfinity))) 		MinusInfinity
-	(ite (and (=  x PlusInfinity) (not (=  y MinusInfinity))) 		PlusInfinity
-	(ite (and (=  y PlusInfinity) (not (=  x MinusInfinity))) 		PlusInfinity
-	(ite (and (= x PlusZero) (or (= y MinusZero) (= y PlusZero)))	PlusZero
-	(ite (and (= y PlusZero) (or (= x MinusZero) (= x PlusZero))) 	PlusZero
-	(ite (and (= x MinusZero) (= y MinusZero))						MinusZero Number )))))))))))
+	(ite (and (= x Number) (= y Number)) 							Number
+	(ite (or  (= x NotANumber) 		(=  y NotANumber)) 				NotANumber
+	(ite (and (= x MinusInfinity) 	(=  y PlusInfinity)) 			NotANumber
+	(ite (and (= x PlusInfinity) 	(=  y MinusInfinity)) 			NotANumber
+	(ite (= x MinusInfinity) 										MinusInfinity
+	(ite (= y MinusInfinity)								 		MinusInfinity
+	(ite (= x PlusInfinity)									 		PlusInfinity
+	(ite (= y PlusInfinity)											PlusInfinity
+	(ite (and (= x PlusZero)  (or (= y MinusZero) (= y PlusZero)))	PlusZero
+	(ite (and (= y PlusZero)  (or (= x MinusZero) (= x PlusZero))) 	PlusZero
+	(ite (and (= x MinusZero) (= y MinusZero))						MinusZero Number ))))))))))))
 	
 (define-fun sub ((x Real) (valuex Real) (y Real) (valuey Real)) Real
-	(ite (or (= x NotANumber) (= y NotANumber)) 					NotANumber
-	(ite (and (=  x MinusInfinity) (=  y MinusInfinity)) 			NotANumber
-	(ite (and (=  x PlusInfinity) (=  y PlusInfinity)) 				NotANumber
-	(ite (and (=  x MinusInfinity) (not (=  y MinusInfinity))) 		MinusInfinity
-	(ite (and (=  y MinusInfinity) (not (=  x MinusInfinity))) 		PlusInfinity
-	(ite (and (=  x PlusInfinity) (not (=  y PlusInfinity))) 		PlusInfinity
-	(ite (and (=  y PlusInfinity) (not (=  x PlusInfinity))) 		MinusInfinity
-	(ite (and (= x PlusZero) (or (= y MinusZero) (= y PlusZero)))	PlusZero
+	(ite (and (= x Number) (= y Number)) 							Number
+	(ite (or  (= x NotANumber) 		(= y NotANumber)) 				NotANumber
+	(ite (and (= x MinusInfinity) 	(= y MinusInfinity)) 			NotANumber
+	(ite (and (= x PlusInfinity) 	(= y PlusInfinity)) 			NotANumber
+	(ite (= x MinusInfinity) 										MinusInfinity
+	(ite (= y MinusInfinity)										PlusInfinity
+	(ite (= x PlusInfinity)											PlusInfinity
+	(ite (= y PlusInfinity)											MinusInfinity
+	(ite (and (= x PlusZero) (or (= y MinusZero) (= y PlusZero)))	PlusZero	
 	(ite (and (= y MinusZero) (or (= x MinusZero) (= x PlusZero))) 	PlusZero
-	(ite (and (= x MinusZero) (= y PlusZero))						MinusZero Number )))))))))))
+	(ite (and (= x MinusZero) (= y PlusZero))						MinusZero Number ))))))))))))
 	
 (define-fun mul ((x Real) (valuex Real) (y Real) (valuey Real)) Real
-	(ite (or (= x NotANumber) (= y NotANumber)) 										NotANumber
-	(ite (and (= x MinusInfinity) (or (= y MinusInfinity) (= y MinusZero))) 			PlusInfinity
-	(ite (and (= x PlusInfinity) (or (= y PlusInfinity) (= y PlusZero))) 				PlusInfinity
-	(ite (and (= x PlusInfinity) (= y Number) (> valuey 0.0)) 							PlusInfinity
-	(ite (and (= y MinusInfinity) (or (= x MinusInfinity) (= x MinusZero))) 			PlusInfinity
-	(ite (and (= y PlusInfinity) (or (= x PlusInfinity) (= x PlusZero) (= x Number))) 	PlusInfinity
-	(ite (and (= y PlusInfinity) (= x Number) (> valuex 0.0)) 							PlusInfinity
-	(ite (and (= x PlusZero) (= y PlusZero))											PlusZero
-	(ite (and (= x MinusZero) (= y MinusZero))											PlusZero
-	(ite (or (= x MinusZero) (= y MinusZero))											MinusZero
-	(ite (and (= x Number) (or (= y MinusZero) (= y PlusZero) (= y Number))) 			Number	
-	(ite (and (= y Number) (or (= x MinusZero) (= x PlusZero) (= x Number))) 			Number MinusInfinity )))))))))))))
+	(ite (and (= x Number) (= y Number)) 														Number
+	(ite (or (= x NotANumber) (= y NotANumber)) 												NotANumber
+	(ite (and (or (= x PlusInfinity) (= x MinusInfinity)) (or (= y MinusZero) (= y PlusZero)))	NotANumber
+	(ite (and (or (= y PlusInfinity) (= y MinusInfinity)) (or (= x MinusZero) (= x PlusZero)))	NotANumber
+	(ite (and (= x MinusInfinity) (= y MinusInfinity)) 											PlusInfinity
+	(ite (and (= x MinusInfinity) (= y Number) (< valuey 0.0))  								PlusInfinity
+	(ite (= x MinusInfinity) 																	MinusInfinity
+	(ite (and (= x PlusInfinity) (= y PlusInfinity)) 											PlusInfinity
+	(ite (and (= x PlusInfinity) (= y Number) (> valuey 0.0))  									PlusInfinity
+	(ite (= x PlusInfinity) 																	MinusInfinity
+	(ite (and (= y PlusInfinity) (= x Number) (> valuex 0.0))									PlusInfinity
+	(ite (and (= y PlusInfinity) (= x Number) (< valuex 0.0))									MinusInfinity
+	(ite (and (= y MinusInfinity) (= x Number) (> valuex 0.0))									MinusInfinity
+	(ite (and (= y MinusInfinity) (= x Number) (< valuex 0.0))									PlusInfinity
+	(ite (and (= x MinusZero) (= y PlusZero)) 													MinusZero
+	(ite (and (= x MinusZero) (= y Number) (> valuey 0.0)) 										MinusZero
+	(ite (= x MinusZero)								 										PlusZero
+	(ite (and (= x PlusZero) (= y MinusZero)) 													MinusZero
+	(ite (and (= x PlusZero) (= y Number) (< valuey 0.0)) 										MinusZero
+	(ite (= x PlusZero)								 											PlusZero
+	(ite (and (= y PlusZero) (= x Number) (> valuex 0.0)) 										PlusZero
+	(ite (and (= y PlusZero) (= x Number) (< valuex 0.0)) 										MinusZero
+	(ite (and (= y MinusZero) (= x Number) (> valuex 0.0)) 										MinusZero PlusZero ))))))))))))))))))))))))
 	
 (define-fun divFloat ((x Real) (valuex Real) (y Real) (valuey Real)) Real
 	(ite (and (= x Number) (= y Number)) 																Number
@@ -82,21 +86,20 @@
 	(ite (and (or (= x MinusZero) (= x PlusZero)) (or (= y MinusZero) (= y PlusZero)))					NotANumber
 	(ite (and (or (= x MinusInfinity) (= x PlusInfinity)) (or (= y MinusInfinity) (= y PlusInfinity)))	NotANumber
 	(ite (and (= x MinusInfinity) (or (= y MinusZero) (and (= y Number) (< valuey 0.0)))) 				PlusInfinity
-	(ite (and (= x MinusInfinity) (or (= y PlusZero ) (and (= y Number) (> valuey 0.0)))) 				MinusInfinity
+	(ite (= x MinusInfinity) 														 					MinusInfinity
 	(ite (and (= x PlusInfinity) (or (= y MinusZero) (and (= y Number) (< valuey 0.0)))) 				MinusInfinity
-	(ite (and (= x PlusInfinity) (or (= y PlusZero ) (and (= y Number) (> valuey 0.0)))) 				PlusInfinity
+	(ite (= x PlusInfinity) 																			PlusInfinity
 	(ite (and (= x MinusZero) (or (= y MinusInfinity) (and (= y Number) (< valuey 0.0)))) 				PlusZero
-	(ite (and (= x MinusZero) (or (= y PlusInfinity) (and (= y Number) (> valuey 0.0)))) 				MinusZero
-	(ite (and (= x PlusZero) (or (= y MinusInfinity) (and (= y Number) (< valuey 0.0)))) 				MinusZero
-	(ite (and (= x PlusZero) (or (= y PlusInfinity) (and (= y Number) (> valuey 0.0)))) 				PlusZero
-	(ite (and (= y Number) (> valuey 0.0) (= y MinusInfinity))  										MinusZero
-	(ite (and (= y Number) (> valuey 0.0) (= y PlusInfinity))	  										PlusZero
-	(ite (and (= y Number) (> valuey 0.0) (= y MinusZero))  											MinusInfinity
-	(ite (and (= y Number) (> valuey 0.0) (= y PlusZero))	  											PlusInfinity
-	(ite (and (= y Number) (< valuey 0.0) (= y MinusInfinity))  										PlusZero
-	(ite (and (= y Number) (< valuey 0.0) (= y PlusInfinity))	  										MinusZero
-	(ite (and (= y Number) (< valuey 0.0) (= y MinusZero))  											PlusInfinity 
-	MinusInfinity ))))))))))))))))))))
+	(ite (= x MinusZero) 																				MinusZero
+	(ite (and (= x PlusZero)  (or (= y MinusInfinity) (and (= y Number) (< valuey 0.0)))) 					MinusZero
+	(ite (= x PlusZero) 																				PlusZero
+	(ite (and (= x Number) (> valuex 0.0) (= y MinusInfinity))  										MinusZero
+	(ite (and (= x Number) (> valuex 0.0) (= y PlusInfinity))	  										PlusZero
+	(ite (and (= x Number) (> valuex 0.0) (= y MinusZero))  											MinusInfinity
+	(ite (and (= x Number) (> valuex 0.0) (= y PlusZero))	  											PlusInfinity
+	(ite (and (= x Number) (< valuex 0.0) (= y MinusInfinity))  										PlusZero
+	(ite (and (= x Number) (< valuex 0.0) (= y PlusInfinity))	  										MinusZero
+	(ite (and (= x Number) (< valuex 0.0) (= y MinusZero))  					PlusInfinity MinusInfinity ))))))))))))))))))))
 	
 (define-fun g ((x Real) (valuex Real) (y Real) (valuey Real)) Bool
 	(ite (or (= x NotANumber) (= y NotANumber)) 										false
@@ -110,7 +113,7 @@
 	(ite (or (= x NotANumber) (= y NotANumber)) 										false
 	(ite (or (= x PlusInfinity) (= y MinusInfinity))									true
 	(ite (or (= x MinusInfinity) (= y PlusInfinity))									false
-	(ite (and (or (= x MinusZero) (= x PlusZero)) (or (= y MinusZero) (= y PlusZero))) 	true
+	(ite (and (or (= x MinusZero) (= x PlusZero)) (or (= y MinusZero) (= y PlusZero))) 	true 
 	(>= valuex valuey))))))
 
 (define-fun s ((x Real) (valuex Real) (y Real) (valuey Real)) Bool
@@ -149,6 +152,3 @@
 
 (define-fun maxFlag ((flagx Real) (valuex Real) (flagy Real) (valuey Real)) Real
 	(ite (g flagx valuex flagy valuey) flagx flagy))
-
-
-

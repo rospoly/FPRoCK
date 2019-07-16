@@ -129,18 +129,19 @@ class FPRyacc:
 	
 	def p_Constraints(self, p):
 		'''Constraints : ConstraintsList'''
-		if not self.buildModelForVarsOnlyForBNB:
-			p[0]=self.solver.encodeConstraints(str(p[1]))
+		#if not self.buildModelForVarsOnlyForBNB:
+		#	p[0]=self.solver.encodeConstraints(str(p[1]))
+		p[0]=str(p[1])
 		self.myPrint("Constraints",p)
 	
 	def p_ConstraintsListBool(self, p):
 		'''ConstraintsList : ListBoolExpr
 						   | ListBoolExpr NEWLINES ConstraintsList'''
-		if not self.buildModelForVarsOnlyForBNB:
+		if not self.buildModelForVarsOnlyForBNB:			
 			if len(p)>2:
-				p[0]=self.solver.buildContraintLine(str(p[1]))+str(p[3])
-			elif len(p)==2:
-				p[0]=self.solver.buildContraintLine(str(p[1]))
+				p[0]=str(p[1])+" "+str(p[3])
+			else:
+				p[0]=str(p[1])
 		self.myPrint("ConstraintsListBool",p)
 	
 	def p_ConstraintsListAssign(self, p):
@@ -161,20 +162,19 @@ class FPRyacc:
 			p[0]=""
 		self.myPrint("AliasAssignment",p)
 	
-	#'''ListBoolExpr : Empty
-	#				| NotEmptyListBoolExpr '''
 	def p_ListBoolExpr(self, p):
 		'''ListBoolExpr : NotEmptyListBoolExpr
 		'''
-		if str(p[1])!="None":	
-			p[0]=str(p[1])
-		else:
-			p[0]=""
+		if not self.buildModelForVarsOnlyForBNB:			
+			if str(p[1])!="None":
+				p[0]=self.solver.encodeConstraints(str(p[1]))
+			else:
+				p[0]=""
 		self.myPrint("ListBoolExpr",p)
 	
-	#def p_empty(self, p):
-	#	'Empty :'
-	#	pass
+	def p_empty(self, p):
+		'Empty :'
+		pass
 		
 	def p_NotEmptyListBoolExpr(self, p):
 		'''NotEmptyListBoolExpr : BoolExpr
@@ -404,7 +404,7 @@ class FPRyacc:
 			self.solver.checkVariable(str(p[1]))
 			p[0]=str(p[1])
 		self.myPrint("Variable",p)
-	
+
 	def p_error(self, p):
 		if p:
 			raise Exception("Syntax error at '%s', type %s, on line %d\n, program '%s'" % (p.value, p.type, p.lineno, self.program))

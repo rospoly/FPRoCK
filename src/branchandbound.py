@@ -14,7 +14,7 @@ class BranchAndBound:
 
 	def recomputePriorityLists(self,variables):
 		priorityList=sorted(variables.values(), key=lambda x: x.priority, reverse = True)
-		print "priorityList",priorityList
+		#print "priorityList",priorityList
 		sumPriority=self.getSumPriorities(priorityList)
 								
 		if sumPriority==0.0: #all variables are exausted
@@ -28,7 +28,7 @@ class BranchAndBound:
 		priorities=[]
 		while i<len(listVar):
 			if sumPriority!=0.0:
-				print listVar[i].name,float(listVar[i].priority), float(listVar[i].priority)/sumPriority
+				#print listVar[i].name,float(listVar[i].priority), float(listVar[i].priority)/sumPriority
 				priorities.append(float(listVar[i].priority)/sumPriority)
 			else:
 				priorities.append(0.0)
