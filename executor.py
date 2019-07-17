@@ -11,16 +11,17 @@ def compute(text, currentSolver, deepThreshold, timeout, debug, index, tmpDir):
 	
 	tmpsolver=copy.deepcopy(currentSolver)
 
+	#incremental mode here
+
 	real_variables= tmpsolver.RealVariables
 	coverFP_variables= tmpsolver.realPrivateCounterpartFP
 	fp_variables= tmpsolver.FPVariables
-	
 
 	startTime=time.time()
 	print "Start Encoding!"
 	myYacc=FPRyacc(text,tmpsolver,False,True,debug)
 
-	z3 = z3wrapper(tmpsolver.getEncoding(),timeout)
+	z3 = z3wrapper(tmpsolver.encodeProblem(),timeout)
 	print "End Encoding!"
 	print "Start Solving!"
 	solverList = [z3]
@@ -78,7 +79,7 @@ solversList.append(initsolver)
 deepThreshold=1
 iteratorSolvers=0
 
-timeout=10.0
+timeout=5.0
 #maxtimeout=120.0
 
 maxLenghtList=2000

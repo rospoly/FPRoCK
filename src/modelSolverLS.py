@@ -227,6 +227,7 @@ class FPVariable:
 		val=""
 		var="abs-"+self.realCounterpart.name
 		varexp="two-to-exp-p-minus-e-"+self.realCounterpart.name
+		
 		with gmpy2.local_context(gmpy2.context(), precision=max(5*self.mantissa,100)) as ctx:	
 			iteratorExp=gmpy2.floor(gmpy2.log2(self.expLb))
 			iterator=gmpy2.exp2(iteratorExp)
@@ -246,24 +247,16 @@ class FPVariable:
 			nextIterator=gmpy2.exp2(iteratorExp+1)
 			twoPminusE=gmpy2.exp2(self.mantissa-iteratorExp)
 			
-			#if not iterator<=self.expUb:
-			#	val=val+"(assert (=> (and (>= "+var+" "+printFullNumberMPFR(iterator)+") (<= "+var+" "+self.quantizedub+")) (= "+varexp+" "+printFullNumberMPFR(twoPminusE)+"))) \n"
-			#	val=val+"\t"+printFullNumberMPFR(twoPminusE)+" "
-			
 			while iterator<=self.expUb:
 				if nextIterator<=self.expUb:
 					val=val+"(assert (=> (and (>= "+var+" "+printFullNumberMPFR(iterator)+") (< "+var+" "+printFullNumberMPFR(nextIterator)+")) (= "+varexp+" "+printFullNumberMPFR(twoPminusE)+"))) \n"
-					#par=par+")"	
 				else:
 					val=val+"(assert (=> (and (>= "+var+" "+printFullNumberMPFR(iterator)+") (<= "+var+" "+self.quantizedub+")) (= "+varexp+" "+printFullNumberMPFR(twoPminusE)+"))) \n"
-					#par=par+")"
-					#val=val+"\t"+printFullNumberMPFR(twoPminusE)+" "
 				iteratorExp=iteratorExp+1
 				iterator=gmpy2.exp2(iteratorExp)
 				nextIterator=gmpy2.exp2(iteratorExp+1)
 				twoPminusE=gmpy2.exp2(self.mantissa-iteratorExp)
 				
-			#val=val+par+"\n\n"
 		return val
 
 	def encode(self):
@@ -507,7 +500,7 @@ class modelSolverLS:
 		self.status="Virgin"
 		self.encodingOrderedList=[]
 	
-	def getEncoding(self):
+	def encodeProblem(self):
 		return (self.preliminaryEncoding+self.encodeVariablesAndProgram())
 		
 	def initMapSymbolsSpecialValues(self):
